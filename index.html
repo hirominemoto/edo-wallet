@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>江戸の財布 — 現代の値段を文に換算</title>
+<style>
+  :root{
+    --bg:#0f1a14;
+    --card:#14241b;
+    --card-border:#1f3a2b;
+    --ink:#e8f0ea;
+    --ink-dim:#9db3a6;
+    --ink-faint:#6f877a;
+    --accent:#7fd4a3;
+    --accent-soft:#2a4a38;
+    --pill:#1c3326;
+    --pill-active:#2f5a40;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px 48px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%;max-width:520px;}
+  header{text-align:center;margin-bottom:20px;}
+  header h1{font-size:1.15rem;font-weight:700;letter-spacing:.04em;}
+  header p{font-size:.8rem;color:var(--ink-dim);margin-top:4px;}
+
+  .input-row{
+    display:flex;align-items:baseline;gap:10px;justify-content:center;
+    margin:18px 0 14px;
+  }
+  .input-row input{
+    width:170px;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid var(--accent-soft);
+    color:var(--ink);
+    font-size:2rem;
+    font-weight:700;
+    text-align:right;
+    padding:4px 6px;
+    outline:none;
+    font-variant-numeric:tabular-nums;
+  }
+  .input-row input:focus{border-bottom-color:var(--accent);}
+  .input-row .yen{font-size:1.3rem;color:var(--ink-dim);font-weight:600;}
+
+  .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;}
+  .pill{
+    background:var(--pill);
+    color:var(--ink-dim);
+    border:1px solid var(--card-border);
+    border-radius:999px;
+    padding:7px 15px;
+    font-size:.82rem;
+    cursor:pointer;
+    transition:.15s;
+    white-space:nowrap;
+  }
+  .pill.active{background:var(--pill-active);color:var(--ink);border-color:var(--accent);}
+  .pill:hover{color:var(--ink);}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:22px 22px 20px;
+  }
+  .result{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .result .mon{font-size:2.6rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;}
+  .result .mon-label{font-size:1.1rem;color:var(--ink);font-weight:700;}
+  .result .sub{font-size:.82rem;color:var(--ink-dim);width:100%;margin-top:2px;}
+
+  .section-label{font-size:.75rem;color:var(--ink-faint);margin:20px 0 8px;letter-spacing:.05em;}
+
+  .feel{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}
+  .feel li{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem;border-bottom:1px dotted var(--card-border);padding-bottom:5px;}
+  .feel li .name{color:var(--ink-dim);}
+  .feel li .val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+
+  .note{font-size:.72rem;color:var(--ink-faint);margin-top:18px;line-height:1.7;}
+
+  footer{text-align:center;font-size:.7rem;color:var(--ink-faint);margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>江戸の財布</h1>
+    <p>現代の値段を、江戸の旅人の文（もん）に換算</p>
+  </header>
+
+  <div class="input-row">
+    <input id="yen" type="number" inputmode="numeric" value="300" min="0" aria-label="金額（円）">
+    <span class="yen">円</span>
+  </div>
+
+  <div class="pills" id="pills">
+    <button class="pill active" data-rate="30">標準（1文30円）</button>
+    <button class="pill" data-rate="10">米（1文10円）</button>
+    <button class="pill" data-rate="25">蕎麦（1文25円）</button>
+  </div>
+
+  <div class="card">
+    <div class="result">
+      <span class="mon" id="mon">10</span>
+      <span class="mon-label">文</span>
+      <span class="sub" id="sub">300円・標準のものさし</span>
+    </div>
+
+    <div class="section-label">江戸の旅人の財布でいうと</div>
+    <ul class="feel" id="feel"></ul>
+
+    <p class="note">
+      1文の価値は基準によって変わります。標準＝30円／米価＝10円／蕎麦＝25円。<br>
+      江戸の値段は時代や場所で変わるので、だいたいの目安です。※諸説あり。
+    </p>
+  </div>
+
+  <footer>東海道の旅帖より — 本日の道中勘定（軽量版）</footer>
+</div>
+
+<script>
+  // 江戸の品々：1文あたりの基準価格は「文」で固定（標準30円/文で設計）
+  // 換算は「円 → 文（選んだ基準で）」→「文 → 各品の個数」
+  const ITEMS = [
+    {name:"かけ蕎麦", unit:"杯", mon:16},
+    {name:"団子",     unit:"串", mon:4},
+    {name:"湯屋",     unit:"回", mon:10, approx:true},
+    {name:"旅籠(食事つき)", unit:"泊", mon:175, approx:true},
+  ];
+
+  const RATE_LABEL = {30:"標準", 10:"米", 25:"蕎麦"};
+
+  let rate = 30;
+
+  const yenEl  = document.getElementById("yen");
+  const monEl  = document.getElementById("mon");
+  const subEl  = document.getElementById("sub");
+  const feelEl = document.getElementById("feel");
+  const pills  = document.getElementById("pills");
+
+  function fmt(n){
+    // 小数は1桁まで、整数ならそのまま
+    if(Number.isInteger(n)) return n.toLocaleString();
+    return (Math.round(n*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
+  }
+
+  function render(){
+    const yen = Math.max(0, Number(yenEl.value) || 0);
+    const mon = yen / rate;                 // 選んだ基準での文数
+    monEl.textContent = fmt(mon);
+    subEl.textContent = `${yen.toLocaleString()}円・${RATE_LABEL[rate]}のものさし`;
+
+    feelEl.innerHTML = "";
+    ITEMS.forEach(it=>{
+      const count = mon / it.mon;           // 品は「文」基準で固定換算
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="name">${it.name}${it.approx?"※":""}</span>`
+                   + `<span class="val">${fmt(count)}${it.unit}</span>`;
+      feelEl.appendChild(li);
+    });
+  }
+
+  yenEl.addEventListener("input", render);
+  pills.addEventListener("click", e=>{
+    const btn = e.target.closest(".pill");
+    if(!btn) return;
+    rate = Number(btn.dataset.rate);
+    [...pills.children].forEach(p=>p.classList.toggle("active", p===btn));
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
